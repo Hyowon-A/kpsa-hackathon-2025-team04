@@ -3,18 +3,41 @@ from utils.security import generate_jwt, token_required
 from sqlalchemy import select
 from db.models import db, Booking
 from datetime import datetime, timedelta
-
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
 
 survey_bp = Blueprint("survey", __name__, url_prefix="/survey")
 
-@survey_bp.route("/")
+
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-@survey_bp.route("/objective-result", methods=['POST'])
-def objective_result():
+@survey_bp.route("/result", methods=['POST'])
+def esult():
     try:
         data = request.json  # 설문 응답 및 수치 데이터
         
+        # 주관적 설문
+        overall_health_aware = data.get("overall_health_aware")
+        daily_function = data.get("daily_function")
+        life_pattern = data.get("life_pattern")
+        mental = data.get("mental")
+        inconvenience_concern = data.get("inconvenience_concern")
+        
+        subjective_score = data.get("subjective_score")
+        
+        subjective_result = jsonify({
+            "주관적 점수": subjective_score,
+            "전반적 건강 인식": overall_health_aware,
+            "일상기능&체력": daily_function,
+            "생활습관(운동,수면,식사)": life_pattern,
+            "정신/감정 상태": mental,
+            "질병 관련 불편함 및 불안": inconvenience_concern
+        })
+        
+        # 객관적 설문
         # 건강검진결과 업로드 했을 경우
         if data.get("upload"):
             score = 100  # 기본 점수 (100점 만점)
@@ -148,8 +171,13 @@ def objective_result():
             else:
                 conditions["hemoglobin"] = "정상"
 
+
             return jsonify({
                 "score": score,
+                "medications": medications,
+                "supplements": supplements,
+                "past_conditions": past_conditions,
+                "family_history": family_history,
                 "conditions": conditions
             })
         # 건강검진결과 업로드 안했을 경우
@@ -177,3 +205,24 @@ def objective_result():
 
     except Exception as e:
         return jsonify({"message": "Error calculating score", "error": str(e)}), 500
+    
+    
+    
+def ask_gpt():
+    user_question = request.json.get("question", "")
+    if not user_question:
+        return jsonify({"error": "No question provided"}), 400
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": user_question}
+            ],
+            max_tokens=300
+        )
+        answer = response.choices[0].message.content
+        return jsonify({"answer": answer})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
