@@ -9,6 +9,7 @@ import SwiftUI
 // MARK: - Signup View
 struct SignupView: View {
     @Environment(NavigationRouter.self) private var router
+    @EnvironmentObject var signupVM: SignupViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var email = ""
     @State private var password = ""
@@ -23,11 +24,31 @@ struct SignupView: View {
                 
                 ProfileImageView()
 
-                InputField(title: "이메일", placeholder: "이메일 입력", text: $email)
-                SecureInputField(title: "비밀번호", placeholder: "비밀번호 입력", text: $password)
-                InputField(title: "이름", placeholder: "이름 입력", text: $name)
-                InputField(title: "생년월일", placeholder: "YYYY / M / D", text: $birth)
-                GenderSelectionView(selectedGender: $gender)
+                InputField(title: "이메일", placeholder: "이메일 입력", text: $signupVM.email)
+                SecureInputField(title: "비밀번호", placeholder: "비밀번호 입력", text: $signupVM.password)
+                InputField(title: "이름", placeholder: "이름 입력", text: $signupVM.name)
+                // 기존 @State private var birth = "" 제거
+
+                InputField(
+                    title: "생년월일",
+                    placeholder: "예: 2003-08-05",
+                    text: Binding(
+                        get: {
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "yyyy-MM-dd"
+                            return formatter.string(from: signupVM.dob)
+                        },
+                        set: { newValue in
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "yyyy-MM-dd"
+                            if let date = formatter.date(from: newValue) {
+                                signupVM.dob = date
+                            }
+                        }
+                    )
+                )
+
+                GenderSelectionView(selectedGender: $signupVM.gender)
                 
                 PrimaryButton(title: "다음") {
                     // 회원가입 페이지 2로 이동
@@ -149,7 +170,7 @@ struct ProfileImageView: View {
                             .scaledToFill()
                     } else {
                         // 기본 프로필 이미지 표시
-                        Image("default_profile")
+                        Image("Logo_Circle")
                             .resizable()
                             .scaledToFill()
                     }
@@ -215,8 +236,11 @@ struct ProfileImageView: View {
 }
 
 #Preview {
+    @Previewable @StateObject var signupVM = SignupViewModel()
+    
     NavigationStack {
         SignupView()
             .environment(NavigationRouter())
+            .environmentObject(signupVM)
     }
 }

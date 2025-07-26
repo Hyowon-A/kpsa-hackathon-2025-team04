@@ -10,6 +10,7 @@ import UIKit
 
 struct LoginView: View {
     @Environment(NavigationRouter.self) private var router
+    @EnvironmentObject var loginVM: ContentsViewModel
     @State private var email: String = ""
     @State private var password: String = ""
     
@@ -25,23 +26,21 @@ struct LoginView: View {
             Spacer().frame(height: 65)
             
             // 2. 로고 플레이스홀더
-            Circle()
-                .fill(Color.gray.opacity(0.3))
+            Image("Logo")
                 .frame(width: 120, height: 120)
-                .padding(.top, 16)
             
             Spacer().frame(height: 65)
             
             // 3. 입력 필드
             VStack(spacing: 16) {
-                TextField("이메일 또는 전화번호", text: $email)
+                TextField("이메일 또는 전화번호", text: $loginVM.email)
                     .padding()
                     .background(Color.gray.opacity(0.3))
                     .cornerRadius(25)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                 
-                SecureField("비밀번호", text: $password)
+                SecureField("비밀번호", text: $loginVM.password)
                     .padding()
                     .background(Color.gray.opacity(0.3))
                     .cornerRadius(25)
@@ -52,6 +51,7 @@ struct LoginView: View {
             // 4. 로그인 버튼
             Button(action: {
                 // 로그인 처리
+                loginVM.loginAndStoreTokens(email: loginVM.email, password: loginVM.password)
             }) {
                 Text("로그인")
                     .foregroundColor(.primary)
@@ -81,6 +81,9 @@ struct LoginView: View {
 }
 
 #Preview {
+    @Previewable @StateObject var loginVM = ContentsViewModel()
+    
     LoginView()
         .environment(NavigationRouter())
+        .environmentObject(loginVM)
 }

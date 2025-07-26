@@ -9,23 +9,47 @@ import SwiftUI
 
 struct RootView: View {
     @State private var router = NavigationRouter()
+    @StateObject private var signupVM = SignupViewModel()
+    @StateObject private var loginVM = ContentsViewModel()
     
     var body: some View {
         NavigationStack(path: $router.path) {
             LoginView()
                 .environment(router)
+                .environmentObject(loginVM)
                 .navigationDestination(for: Route.self) { route in
                         switch route {
                         case .login:
                             LoginView()
                             // 하위 뷰에 environment로 router를 넘겨준다.
                                 .environment(router)
+                                .environmentObject(loginVM)
                         case .signup:
-                            SignupView().environment(router)
+                            SignupView()
+                                .environment(router)
+                                .environmentObject(signupVM)
                         case .home:
                             HomeView().environment(router)
                         case .signup2:
-                            SignupView2().environment(router)
+                            SignupView2()
+                                .environment(router)
+                                .environmentObject(signupVM)
+                        case .surveyStep1:
+                            SurveyView().environment(router)
+                        case .surveyStep2:
+                            SurveyStep2View().environment(router)
+                        case .surveyStep3:
+                            SurveyStep3View().environment(router)
+                        case .surveyStep4:
+                            SurveyStep4View().environment(router)
+                        case .nearByPharmacy:
+                            NearbyPharmacyView().environment(router)
+                        case .calendar:
+                            CalendarView().environment(router)
+                        case .report:
+                            HealthReportView().environment(router)
+                        case .cornerSelection:
+                            ConcernSelectionView().environment(router)
                     }
                 }
         }

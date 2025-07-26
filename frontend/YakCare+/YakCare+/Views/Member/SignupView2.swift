@@ -1,57 +1,12 @@
 import SwiftUI
 
-// MARK: — DropdownField
-struct DropdownField: View {
-    let title: String
-    @Binding var selection: String
-    let options: [String]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 14))
-            Menu {
-                ForEach(options, id: \.self) { option in
-                    Button(option) {
-                        selection = option
-                    }
-                }
-            } label: {
-                HStack {
-                    Text(selection)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 16, weight: .medium))
-                }
-                .padding()
-                .background(Color.gray.opacity(0.3))
-                .cornerRadius(12)
-            }
-        }
-    }
-}
-
-// MARK: — OptionButton
-struct OptionButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(isSelected ? Color.blue.opacity(0.2) : Color.gray.opacity(0.3))
-                .cornerRadius(12)
-        }
-    }
-}
 
 // MARK: — SignupView2
 struct SignupView2: View {
+    @Environment(NavigationRouter.self) private var router
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var signupVM: SignupViewModel
 
     // 직업군
     @State private var jobGroup: String = "사무직"
@@ -131,8 +86,27 @@ struct SignupView2: View {
                 
                 // 확인 버튼
                 Button(action: {
-                    // 확인 액션
-                }) {
+                    // ViewModel에 직업, 근무형태 반영
+                    signupVM.occupation = customJob.isEmpty ? jobGroup : customJob
+                    signupVM.workStyle = customWorkType.isEmpty ? workType : customWorkType
+
+                    // UserData 생성 및 회원가입 요청
+                    let user = UserData(
+                        email: signupVM.email,
+                        password: signupVM.password,
+                        name: signupVM.name,
+                        dob: signupVM.dob,
+                        gender: signupVM.gender,
+                        occupation: signupVM.occupation,
+                        work_style: signupVM.workStyle
+                    )
+
+                    signupVM.createUser(user)
+
+                    // 홈으로 이동
+                    router.push(.home)
+                })
+                {
                     Text("확인")
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -144,6 +118,55 @@ struct SignupView2: View {
             .padding(.horizontal, 16)
         }
         .navigationBarBackButtonHidden()
+    }
+}
+
+// MARK: — DropdownField
+struct DropdownField: View {
+    let title: String
+    @Binding var selection: String
+    let options: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 14))
+            Menu {
+                ForEach(options, id: \.self) { option in
+                    Button(option) {
+                        selection = option
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(selection)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 16, weight: .medium))
+                }
+                .padding()
+                .background(Color.gray.opacity(0.3))
+                .cornerRadius(12)
+            }
+        }
+    }
+}
+
+// MARK: — OptionButton
+struct OptionButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(isSelected ? Color.blue.opacity(0.2) : Color.gray.opacity(0.3))
+                .cornerRadius(12)
+        }
     }
 }
 

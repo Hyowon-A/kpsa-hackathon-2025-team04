@@ -13,4 +13,14 @@ enum Route: Hashable {
     case login
 
     case home
+    
+    case surveyStep1
+    case surveyStep2
+    case surveyStep3
+    case surveyStep4
+    
+    case cornerSelection
+    case nearByPharmacy
+    case calendar
+    case report
 }
