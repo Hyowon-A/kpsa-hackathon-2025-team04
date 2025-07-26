@@ -47,9 +47,7 @@ struct SurveyDropdownQuestion: View {
                 .font(.system(size: 14))
             Menu {
                 ForEach(options, id: \.self) { option in
-                    Button(option) {
-                        selection = option
-                    }
+                    Button(option) { selection = option }
                 }
             } label: {
                 HStack {
@@ -67,14 +65,51 @@ struct SurveyDropdownQuestion: View {
     }
 }
 
+// MARK: - NavBar + Progress Component
+struct SurveyNavBarProgressView: View {
+    @Environment(\.dismiss) private var dismiss
+    let current: Int
+    let total: Int
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                HStack {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.black)
+                    }
+                    Spacer()
+                }
+                HStack {
+                    Spacer()
+                    VStack(spacing: 4) {
+                        Text("설문조사")
+                            .font(.system(size: 22, weight: .semibold))
+                        Text("객관적 지표")
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+            }
+            Spacer().frame(height: 10)
+            SurveyProgressView(current: current, total: total)
+        }
+    }
+}
+
 // MARK: - Survey View
 struct SurveyView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(NavigationRouter.self) private var router
     
     @State private var answer1 = ""
-    @State private var answer2 = "종합비타민"
-    @State private var answer3 = "고혈압"
-    @State private var answer4 = "암(위)"
+    @State private var answer2 = "선택해주세요"
+    @State private var answer3 = "선택해주세요"
+    @State private var answer4 = "선택해주세요"
     private let options2 = ["종합비타민", "비타민 D", "유산균", "루테인"]
     private let options3 = ["고혈압", "당뇨병"]
     private let options4 = ["암(위)", "심장질환", "고혈압", "당뇨병"]
@@ -83,39 +118,11 @@ struct SurveyView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack {
-                    // Custom Navigation Bar
-                    ZStack {
-                        HStack {
-                            Button(action: { dismiss() }) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(.black)
-                            }
-                            Spacer()
-                        }
-                        HStack {
-                            Spacer()
-                            VStack(spacing: 4) {
-                                Text("설문조사")
-                                    .font(.system(size: 22, weight: .semibold))
-                                Text("객관적 지표")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.gray)
-                            }
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16)
-                    }
-
-                    Spacer().frame(height: 10)
-                    
-                    // Progress Indicator
-                    SurveyProgressView(current: 1, total: 3)
-                    
+                    // NavBar + Progress
+                    SurveyNavBarProgressView(current: 1, total: 3)
                     Spacer().frame(height: 30)
-                    
+
                     VStack(spacing: 40) {
-                        // Questions
                         SurveyTextQuestion(
                             question: "1. 현재 복용하고 있는 약물이 있나요?",
                             text: $answer1
@@ -141,9 +148,9 @@ struct SurveyView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 16)
             }
-            // Fixed Next Button at bottom
             PrimaryButton(title: "다음") {
                 // 다음 액션
+                router.push(.surveyStep2)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
@@ -156,6 +163,7 @@ struct SurveyView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack {
             SurveyView()
+                .environment(NavigationRouter())
         }
     }
 }

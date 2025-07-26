@@ -13,4 +13,7 @@ enum Route: Hashable {
     case login
 
     case home
+    
+    case surveyStep2
+    case surveyStep3
 }

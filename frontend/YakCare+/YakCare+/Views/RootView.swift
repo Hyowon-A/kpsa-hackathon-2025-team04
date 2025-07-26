@@ -12,7 +12,7 @@ struct RootView: View {
     
     var body: some View {
         NavigationStack(path: $router.path) {
-            LoginView()
+            SurveyView()
                 .environment(router)
                 .navigationDestination(for: Route.self) { route in
                         switch route {
@@ -26,6 +26,10 @@ struct RootView: View {
                             HomeView().environment(router)
                         case .signup2:
                             SignupView2().environment(router)
+                        case .surveyStep2:
+                            SurveyStep2View().environment(router)
+                        case .surveyStep3:
+                            SurveyStep3View().environment(router)
                     }
                 }
         }
