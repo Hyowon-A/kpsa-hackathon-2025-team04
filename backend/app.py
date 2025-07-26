@@ -1,5 +1,4 @@
 from flask import Flask
-from db.databases import create_tables
 from db.models import db
 from routes import register_routes
 from dotenv import load_dotenv
@@ -16,9 +15,6 @@ def create_app():
     db.init_app(app)
 
     register_routes(app)
-
-    with app.app_context():
-        db.create_all()  # Create tables if they don't exist
 
     return app
 
