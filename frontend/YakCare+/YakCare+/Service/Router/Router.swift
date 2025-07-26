@@ -16,4 +16,5 @@ enum Route: Hashable {
     
     case surveyStep2
     case surveyStep3
+    case surveyStep4
 }

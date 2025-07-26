@@ -81,6 +81,7 @@ struct SurveyStep3View: View {
                 }
                 Button(action: {
                     // TODO: 다음 액션
+                    router.push(.surveyStep4)
                 }) {
                     Text("다음")
                         .frame(maxWidth: .infinity)

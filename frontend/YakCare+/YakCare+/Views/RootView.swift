@@ -30,6 +30,8 @@ struct RootView: View {
                             SurveyStep2View().environment(router)
                         case .surveyStep3:
                             SurveyStep3View().environment(router)
+                        case .surveyStep4:
+                            SurveyStep4View().environment(router)
                     }
                 }
         }
