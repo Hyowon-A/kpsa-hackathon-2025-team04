@@ -20,7 +20,9 @@ def create_app():
 
 app = create_app()
 
-print("hello world")
+@app.route("/")
+def index():
+    return "Backend server is running!"
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
