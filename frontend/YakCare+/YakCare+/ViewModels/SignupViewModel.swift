@@ -30,13 +30,6 @@ final class SignupViewModel: ObservableObject {
                 do {
                     let tokenResponse = try JSONDecoder()
                         .decode(TokenResponse.self, from: response.data)
-                    KeychainManager.standard.saveSession(
-                        .init(
-                            accessToken: tokenResponse.accessToken,
-                            refreshToken: tokenResponse.refreshToken
-                        ),
-                        for: "appNameUser"
-                    )
                     print("✅ Tokens saved")
                 } catch {
                     print("❌ 토큰 디코딩 실패:", error)

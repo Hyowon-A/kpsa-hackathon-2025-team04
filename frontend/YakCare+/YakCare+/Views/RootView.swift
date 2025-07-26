@@ -11,6 +11,7 @@ struct RootView: View {
     @State private var router = NavigationRouter()
     @StateObject private var signupVM = SignupViewModel()
     @StateObject private var loginVM = ContentsViewModel()
+    @StateObject private var surveyVM = SurveyViewModel()
     
     var body: some View {
         NavigationStack(path: $router.path) {
@@ -33,7 +34,6 @@ struct RootView: View {
                         case .signup2:
                             SignupView2()
                                 .environment(router)
-                                .environmentObject(signupVM)
                         case .surveyStep1:
                             SurveyView().environment(router)
                         case .surveyStep2:

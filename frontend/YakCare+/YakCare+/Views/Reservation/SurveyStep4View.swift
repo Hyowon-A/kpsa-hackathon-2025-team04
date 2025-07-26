@@ -144,6 +144,55 @@ struct SurveyStep4View: View {
     }
 }
 
+extension SurveyStep4View {
+    // OCR 결과 리스트
+    @ViewBuilder
+    private var ocrResultListView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(viewModel.ocrResults) { model in
+                ocrResultCard(for: model)
+            }
+        }
+    }
+
+    // OCR 결과 카드
+    @ViewBuilder
+    private func ocrResultCard(for model: MemoModel) -> some View {
+        ZStack(alignment: .topLeading) {
+            VStack(alignment: .leading, spacing: 8) {
+                ScrollView {
+                    Text(model.capturedText)
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color(.secondarySystemBackground))
+                        )
+                }
+                .frame(minHeight: 50, maxHeight: 250)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .gray.opacity(0.2), radius: 2)
+            )
+            .padding(.top, 12)
+
+            // 책 속 문장 뱃지
+            HStack(spacing: 4) {
+                Image(systemName: "bookmark")
+                    .font(.system(size: 12, weight: .medium))
+                Text("책 속 문장")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .offset(x: 10)
+        }
+    }
+}
 
 // MARK: - Preview
 struct SurveyStep4View_Previews: PreviewProvider {
