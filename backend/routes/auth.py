@@ -63,7 +63,7 @@ def login():
         account = db.session.query(Account).filter_by(email=email).first()
         if account and check_password_hash(account.password_hash, password):
             token = generate_jwt({"email": email, "user_id": account.id})
-            res = make_response(jsonify({"message": "Login successful", "token": token}))
+            res = make_response(jsonify({"message": "Login successful"}))
             res.set_cookie("jwt", token, httponly=True, samesite="Lax", secure=False)
             return res
         else:
