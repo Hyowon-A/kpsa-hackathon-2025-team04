@@ -5,8 +5,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 db = SQLAlchemy()
 
-
-class Account(Base):
+class Account(db.Model):
     __tablename__ = "accounts"
     
     id = db.Column(db.Integer, primary_key=True)
@@ -22,7 +21,7 @@ class Account(Base):
         return f"<Account {self.id} - {self.email}>"
 
 
-class User(Base):
+class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -35,14 +34,13 @@ class User(Base):
 
     account = db.relationship("Account", back_populates="users")
     survey_responses = db.relationship("SurveyResponse", back_populates="user", lazy=True)
-    reports = db.relationship("Report", back_populates="user", lazy=True)
     bookings = db.relationship("Booking", back_populates="user", lazy=True)
 
     def __repr__(self):
         return f"<User {self.id} - {self.name}>"
 
 
-class Pharmacist(Base):
+class Pharmacist(db.Model):
     __tablename__ = "pharmacists"
     
     id = db.Column(db.Integer, primary_key=True)
@@ -57,7 +55,7 @@ class Pharmacist(Base):
         return f"<Pharmacist {self.id} - {self.name}>"
 
 
-class Pharmacy(Base):
+class Pharmacy(db.Model):
     __tablename__ = "pharmacies"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -72,7 +70,7 @@ class Pharmacy(Base):
         return f"<Pharmacy {self.id} - {self.name}>"
 
 
-class Booking(Base):
+class Booking(db.Model):
     __tablename__ = "booking"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -89,26 +87,13 @@ class Booking(Base):
         return f"<Booking {self.id} - User {self.user_id} at Pharmacy {self.pharmacy_id}>"
 
 
-class Report(Base):
-    __tablename__ = "reports"
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    image_url = db.Column(db.String(500), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user = db.relationship("User", back_populates="reports")
-
-    def __repr__(self):
-        return f"<Report {self.id} - User {self.user_id}>"
-
-
-class SurveyResponse(Base):
+class SurveyResponse(db.Model):
     __tablename__ = "survey_responses"
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    responses = db.Column(JSONB, nullable=False)
+    objective_responses = db.Column(JSONB, nullable=False)
+    subjective_responses = db.Column(JSONB, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", back_populates="survey_responses")
