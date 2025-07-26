@@ -91,6 +91,7 @@ struct ConcernSelectionView: View {
             // MARK: - Confirm Button
             Button(action: {
                 // 확인 액션
+                router.push(.nearByPharmacy)
             }) {
                 Text("확인")
                     .frame(maxWidth: .infinity)

@@ -32,6 +32,10 @@ struct RootView: View {
                             SurveyStep3View().environment(router)
                         case .surveyStep4:
                             SurveyStep4View().environment(router)
+                        case .nearByPharmacy:
+                            NearbyPharmacyView().environment(router)
+                        case .calendar:
+                            CalendarView().environment(router)
                     }
                 }
         }

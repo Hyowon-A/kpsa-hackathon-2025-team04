@@ -18,6 +18,7 @@ struct Pharmacy: Identifiable {
 // MARK: - 메인 뷰
 struct NearbyPharmacyView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(NavigationRouter.self) private var router
     @State private var searchText: String = ""
     
     // 샘플 데이터
@@ -53,6 +54,7 @@ struct NearbyPharmacyView: View {
                     ForEach(pharmacies) { item in
                         PharmacyRow(pharmacy: item) {
                             // 예약 액션
+                            router.push(.calendar)
                         }
                     }
                 }
@@ -140,7 +142,7 @@ struct PharmacyRow: View {
                 HStack {
                     Text(pharmacy.name)
                         .font(.system(size: 16, weight: .semibold))
-                    Image(systemName: "clock")
+                    Image("TimeCircle")
                         .resizable()
                         .frame(width: 12, height: 12)
                     Spacer().frame(width: 5)
