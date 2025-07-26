@@ -37,6 +37,7 @@ struct NearbyPharmacyView: View {
             NearbyPharmacyNavBar(title: "가까운 약국을 찾아볼까요?") {
                 dismiss()
             }
+            .padding(.vertical, 12)
             
             // Search Bar
             NearbyPharmacySearchBar(searchText: $searchText) {
@@ -64,6 +65,7 @@ struct NearbyPharmacyView: View {
             Spacer().frame(height: 15)
         }
         .background(Color.white.ignoresSafeArea())
+        .navigationBarBackButtonHidden()
     }
 }
 
@@ -171,6 +173,9 @@ struct PharmacyRow: View {
 
 struct NearbyPharmacyView_Previews: PreviewProvider {
     static var previews: some View {
-        NearbyPharmacyView()
+        NavigationStack {
+            NearbyPharmacyView()
+                .environment(NavigationRouter())
+        }
     }
 }

@@ -84,7 +84,7 @@ struct SurveyStep4View: View {
         // 3) 바텀에 고정된 “다음” 버튼
         .safeAreaInset(edge: .bottom) {
             PrimaryButton(title: "다음") {
-                router.push(.surveyStep2)
+                router.push(.report)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)

@@ -45,6 +45,8 @@ struct CalendarView: View {
             NearbyPharmacyNavBar(title: "언제 갈까요?") {
                 dismiss()
             }
+            .padding(.vertical, 12)
+            
             Spacer().frame(height: 15)
             
             ScrollView {
@@ -179,7 +181,7 @@ struct CalendarView: View {
             }
             Button(action: {
                 // 확인 액션
-                router.push(.nearByPharmacy)
+                router.push(.home)
             }) {
                 Text("확인")
                     .frame(maxWidth: .infinity)
@@ -189,19 +191,7 @@ struct CalendarView: View {
             }
             .padding(.horizontal, 32)
         }
-        // MARK: - Toolbar
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    router.pop()
-                } label: {
-                    Image(systemName: "chevron.left").foregroundColor(.black)
-                }
-            }
-            ToolbarItem(placement: .principal) {
-                Text("언제 갈까요?").font(.headline)
-            }
-        }
+        .navigationBarBackButtonHidden(true)
     }
     
     // Helper Functions

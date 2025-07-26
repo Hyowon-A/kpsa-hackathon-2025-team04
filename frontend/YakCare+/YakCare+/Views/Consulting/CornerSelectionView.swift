@@ -101,6 +101,7 @@ struct ConcernSelectionView: View {
             }
             .padding(.horizontal, 16)
         }
+        .navigationBarBackButtonHidden()
         .background(Color.white.ignoresSafeArea())
     }
 }
