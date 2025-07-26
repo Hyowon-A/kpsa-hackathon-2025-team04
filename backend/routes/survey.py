@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 
 survey_bp = Blueprint("survey", __name__, url_prefix="/survey")
 
+@survey_bp.route("/")
+
 
 @survey_bp.route("/objective-result", methods=['POST'])
 def objective_result():
