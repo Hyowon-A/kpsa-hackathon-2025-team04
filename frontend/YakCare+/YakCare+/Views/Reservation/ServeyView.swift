@@ -133,6 +133,7 @@ struct SurveyNavBarProgressView: View {
 struct SurveyView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(NavigationRouter.self) private var router
+    @EnvironmentObject var surveyVM: SurveyViewModel
     
     @State private var answer1: Set<String> = []
     @State private var answer2: Set<String> = []
@@ -245,7 +246,12 @@ struct SurveyView: View {
                 .padding(.bottom, 16)
             }
             PrimaryButton(title: "다음") {
-                // 다음 액션
+                // 체크박스 선택값을 뷰모델에 저장
+                surveyVM.medications = Array(answer1)
+                surveyVM.supplements = Array(answer2)
+                surveyVM.pastConditions = Array(answer3)
+                surveyVM.familyHistory = Array(answer4)
+
                 router.push(.surveyStep2)
             }
             .padding(.horizontal, 16)
@@ -261,6 +267,7 @@ struct SurveyView_Previews: PreviewProvider {
         NavigationStack {
             SurveyView()
                 .environment(NavigationRouter())
+                .environmentObject(SurveyViewModel())
         }
     }
 }

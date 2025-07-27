@@ -4,15 +4,28 @@ import Foundation
 import SwiftUI
 import Vision
 
+struct ParsedHealthData {
+    let bmi: Int?
+    let systolic: Int?
+    let diastolic: Int?
+    let fastingGlucose: Int?
+    let egfr: Int?
+    let ast: Int?
+    let alt: Int?
+}
+
 @Observable
-class HealthScoreViewModel: ImageHandling {
-    var selectedImage: PaperModel?
+class HealthScoreViewModel: ImageHandling, ObservableObject {
+    var selectedImage: MemoModel?
     var images: [UIImage] = []
-    var ocrResults: [PaperModel] = []
+    var ocrResults:[MemoModel] = []
+    var latestParsedHealth: ParsedHealthData? = nil
+
     
     /// ImageHandling 프로토콜을 준수한다. addImage(), getImage()
     func addImage(_ image: UIImage) {
         images.append(image)
+        startOCR(image)
     }
     
     func removeImage(at index: Int) {
@@ -24,6 +37,35 @@ class HealthScoreViewModel: ImageHandling {
         images
     }
     
+    func makeRequestBody(
+        from surveyViewModel: SurveyViewModel,
+        hemoglobin: Double?
+    ) -> HealthSurveyRequest? {
+        guard let health = latestParsedHealth else { return nil }
+
+        return HealthSurveyRequest(
+            overall_health_aware: surveyViewModel.step1Score,
+            daily_function: surveyViewModel.step2Score,
+            life_pattern: surveyViewModel.step3Score,
+            mental: surveyViewModel.step4Score,
+            inconvenience_concern: surveyViewModel.step5Score,
+            subjective_score: surveyViewModel.totalScore,
+            medications: surveyViewModel.medications,
+            supplements: surveyViewModel.supplements,
+            past_conditions: surveyViewModel.pastConditions,
+            family_history: surveyViewModel.familyHistory,
+            systolic: health.systolic,
+            diastolic: health.diastolic,
+            fasting_glucose: health.fastingGlucose,
+            bmi: health.bmi,
+            ast: health.ast,
+            alt: health.alt,
+            egfr: health.egfr,
+            hemoglobin: hemoglobin,
+            upload: true
+        )
+    }
+    
     /// OCR 함수
     /// UIImage를 받아서 Core Graphics 이미지(CGImage)로 변환한다.
     func startOCR(_ uiImage: UIImage) {
@@ -32,8 +74,6 @@ class HealthScoreViewModel: ImageHandling {
             return
         }
         
-        /// request를 약한 참조로 받아 순환 참조를 방지한다.
-        /// 결과를 VNRecognizedTextobservation 배열로 캐스팅한다.
         let request = VNRecognizeTextRequest { [weak self] request, error in
             guard let self = self,
                   let observations = request.results as? [VNRecognizedTextObservation],
@@ -41,45 +81,247 @@ class HealthScoreViewModel: ImageHandling {
                 self?.selectedImage = nil
                 return
             }
-            
-            /// obsrvation에서 가장 높은 신뢰도의 텍스트 후보를 선택해 문자열 배열로 만든다.
-            /// 줄바꿈으로 연결하여 하나의 전체 텍스트 문자열로 만든다.
-            let recognizedStrings = observations.compactMap { $0.topCandidates(1).first?.string }
-            let fullText = recognizedStrings.joined(separator: "\n")
-            let parsed = self.parseWithoutRegex(from: fullText)
-            
-            DispatchQueue.main.async {
-                self.ocrResults.append(parsed)
+
+            // 1. 텍스트와 위치정보 추출
+            let items: [(text: String, box: CGRect)] = observations.compactMap {
+                guard let top = $0.topCandidates(1).first else { return nil }
+                return (top.string, $0.boundingBox)
             }
+
+            // 2. y좌표 기준 그룹핑 (줄 나누기)
+            let groupedByLine = Dictionary(grouping: items) { item in
+                Int(item.box.midY * 100) // y 중심 좌표로 그룹핑
+            }
+
+            // 3. 줄 순서 (y 큰 순 → 위에서 아래로), 줄 내 순서 (x 작은 순 → 왼쪽에서 오른쪽으로)
+            let sortedLines = groupedByLine
+                .sorted { $0.key > $1.key } // y 기준: 위에서 아래로
+                .map { $0.value.sorted { $0.box.minX < $1.box.minX } } // x 기준: 왼→오
+
+            // 4. 줄 단위 문자열 생성
+            let fullText = sortedLines
+                .map { line in line.map { $0.text }.joined(separator: " ") } // 줄 내 문자열
+                .joined(separator: "\n") // 줄 구분
+
+            print("===== 왼→오 정렬된 OCR 결과 =====")
+            print(fullText)
+
+            let (parsedMemo, parsedData) = self.parseWithoutRegex(from: fullText)
+
+            DispatchQueue.main.async {
+                self.ocrResults.append(parsedMemo)
+                self.latestParsedHealth = parsedData
+            }
+            
+            print("✅ 저장된 parsedData:", parsedData)
+
         }
         
         request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true // 오타나 문법 보정 활성화
-        request.recognitionLanguages = ["ko-KR", "en-US"] // 지원 언어
-        
-        /// 백그라운드 스레드에서 OCR request를 실행한다.
-        /// VNImageRequestHandler는 cgImage에 대해 OCR 요청을 수행하는 핸들러다.
+        request.usesLanguageCorrection = true
+        request.recognitionLanguages = ["ko-KR", "en-US"]
+
         DispatchQueue.global(qos: .userInitiated).async {
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             try? handler.perform([request])
         }
     }
+
     
     /// OCR 결과 문자열을 파싱하여 MemoModel로 변환한다.
-    private func parseWithoutRegex(from text: String) -> PaperModel {
-        let lines = text.components(separatedBy: .newlines) // 받은 text를 엔터를 기준으로 나눠서 문자열 배열 lines로 만든다.
-        
-        // 디버깅용 i
-        var i = 0
-        
+    private func parseWithoutRegex(from text: String) -> (MemoModel, ParsedHealthData) {
+        let lines = text.components(separatedBy: .newlines)
+
+        var bmi: String?
+        var bloodPressure: String?
+        var fastingGlucose: String?
+        var egfr: String?
+        var ast: String?
+        var alt: String?
+
         print("===== OCR 디버그 시작 =====")
-                
-        while i < lines.count {
-            let trimmed = lines[i].trimmingCharacters(in: .whitespacesAndNewlines) // trimmingCharacters로 앞뒤 공백 및 줄바꿈 문자 제거
+        for (i, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             print("🔹 [\(i)] \(trimmed)")
-            i += 1
+
+            let tokens = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+
+            // BMI
+            if bmi == nil, trimmed.contains("체질량지수") || trimmed.uppercased().contains("BMI") {
+                bmi = tokens.firstNumberAfter(keyword: "체질량지수")
+            }
+
+            // 혈압
+            if bloodPressure == nil,
+               let match = trimmed.range(of: #"(\d{2,3})\s*/\s*(\d{2,3})"#, options: .regularExpression) {
+                bloodPressure = String(trimmed[match])
+            }
+
+            // 공복혈당
+            if fastingGlucose == nil, trimmed.contains("공복혈당") {
+                fastingGlucose = tokens.firstNumberAfter(keyword: "공복혈당")
+            }
+
+            // eGFR
+            if egfr == nil,
+               trimmed.contains("신사구체여과율") || trimmed.uppercased().contains("E-GFR") {
+                
+                // 같은 줄에서 먼저 시도
+                egfr = tokens.firstNumberNear(keyword: "신사구체여과율")
+                    ?? tokens.firstNumberNear(keyword: "e-GFR")
+                    ?? trimmed.extractFirstNumber()
+                
+                // 만약 여전히 못 찾았으면 다음 줄도 검사 (163이 다음 줄에 있을 때)
+                if (egfr == nil || egfr == "60.0"), i + 1 < lines.count {
+                    let nextLine = lines[i + 1].trimmingCharacters(in: .whitespacesAndNewlines)
+                    let candidates = nextLine.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+                    egfr = candidates.first(where: { $0.onlyDigitsDots().count >= 2 })?.onlyDigitsDots()
+                }
+            }
+
+
+            // AST
+            if ast == nil, trimmed.uppercased().contains("AST") {
+                ast = tokens.firstNumberAfter(keyword: "AST")
+            }
+
+            // ALT
+            if alt == nil, trimmed.uppercased().contains("ALT") {
+                alt = tokens.firstNumberAfter(keyword: "ALT")
+            }
         }
+
+        let resultText = """
+        📊 주요 건강 지표
+
+        • BMI: \(bmi ?? "❌")
+        • 혈압: \(bloodPressure ?? "❌")
+        • 공복혈당: \(fastingGlucose ?? "❌")
+        • eGFR: \(egfr ?? "❌")
+        • AST: \(ast ?? "❌")
+        • ALT: \(alt ?? "❌")
+        """
+
+        print("===== 최종 파싱 결과 =====\n\(resultText)")
         
-        return PaperModel(capturedText: text.isEmpty ? "텍스트가 없습니다." : text)
+        let parsedData = convertParsedStringsToInts(
+            bmi: bmi,
+            bloodPressure: bloodPressure,
+            fastingGlucose: fastingGlucose,
+            egfr: egfr,
+            ast: ast,
+            alt: alt
+        )
+
+        let memoModel = MemoModel(capturedText: resultText)
+        return (memoModel, parsedData)
+
+    }
+
+    private func convertParsedStringsToInts(
+        bmi: String?,
+        bloodPressure: String?,
+        fastingGlucose: String?,
+        egfr: String?,
+        ast: String?,
+        alt: String?
+    ) -> ParsedHealthData {
+        // 혈압 처리 (예: "120 / 80")
+        var systolic: Int? = nil
+        var diastolic: Int? = nil
+        if let bp = bloodPressure {
+            let numbers = bp
+                .components(separatedBy: "/")
+                .map { $0.trimmingCharacters(in: .whitespaces).onlyDigits() }
+
+            if numbers.count == 2 {
+                systolic = Int(numbers[0])
+                diastolic = Int(numbers[1])
+            }
+        }
+
+        // 나머지 수치 정수 변환
+        let bmiDouble = Double(bmi?.onlyDigitsDots() ?? "")
+        let bmiInt = bmiDouble.map { Int($0) }
+        let fastingGlucoseInt = Int(fastingGlucose?.onlyDigits() ?? "")
+        let egfrInt = Int(egfr?.onlyDigits() ?? "")
+        let astInt = Int(ast?.onlyDigits() ?? "")
+        let altInt = Int(alt?.onlyDigits() ?? "")
+
+        return ParsedHealthData(
+            bmi: bmiInt,
+            systolic: systolic,
+            diastolic: diastolic,
+            fastingGlucose: fastingGlucoseInt,
+            egfr: egfrInt,
+            ast: astInt,
+            alt: altInt
+        )
+    }
+
+}
+
+extension String {
+    var nonEmpty: String? {
+        self.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
+    }
+}
+
+extension String {
+    func onlyDigitsDots() -> String {
+        return self.components(separatedBy: CharacterSet(charactersIn: "0123456789.").inverted).joined()
+    }
+}
+
+extension Array where Element == String {
+    func firstNumberAfter(keyword: String) -> String? {
+        guard let keywordIndex = self.firstIndex(where: { $0.contains(keyword) || $0.uppercased().contains(keyword.uppercased()) }) else {
+            return nil
+        }
+        // 키워드 이후 숫자 토큰 찾기
+        for i in (keywordIndex + 1)..<self.count {
+            let cleaned = self[i].onlyDigitsDots()
+            if !cleaned.isEmpty { return cleaned }
+        }
+        return nil
+    }
+}
+
+extension Array where Element == String {
+    func firstNumberNear(keyword: String) -> String? {
+        guard let keywordIndex = self.firstIndex(where: { $0.contains(keyword) || $0.uppercased().contains(keyword.uppercased()) }) else {
+            return nil
+        }
+
+        let lowerBound = Swift.max(0, keywordIndex - 1)
+        let upperBound = Swift.min(self.count - 1, keywordIndex + 3)
+        let nearby = (lowerBound...upperBound)
+
+        for i in nearby {
+            let cleaned = self[i].onlyDigitsDots()
+            if !cleaned.isEmpty { return cleaned }
+        }
+        return nil
+    }
+}
+
+extension String {
+    func extractFirstNumber() -> String? {
+        let matches = self.matches(for: #"(\d+(\.\d+)?)"#)
+        return matches.first
+    }
+
+    func matches(for regex: String) -> [String] {
+        guard let regex = try? NSRegularExpression(pattern: regex) else { return [] }
+        let range = NSRange(startIndex..., in: self)
+        return regex.matches(in: self, range: range).compactMap {
+            Range($0.range, in: self).map { String(self[$0]) }
+        }
+    }
+}
+
+extension String {
+    func onlyDigits() -> String {
+        return self.filter { $0.isNumber }
     }
 }

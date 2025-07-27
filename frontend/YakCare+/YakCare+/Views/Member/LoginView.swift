@@ -50,6 +50,7 @@ struct LoginView: View {
             Spacer().frame(height: 75)
             // 4. 로그인 버튼
             Button(action: {
+                router.push(.home)
                 // 로그인 처리
                 loginVM.loginAndStoreTokens(email: loginVM.email, password: loginVM.password)
             }) {

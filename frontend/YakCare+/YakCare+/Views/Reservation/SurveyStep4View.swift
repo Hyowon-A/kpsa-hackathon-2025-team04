@@ -4,6 +4,9 @@ import PhotosUI
 struct SurveyStep4View: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(NavigationRouter.self) private var router
+    @EnvironmentObject var surveyVM: SurveyViewModel
+    @EnvironmentObject var contentsVM: ContentsViewModel
+    @EnvironmentObject var imageVM: HealthScoreViewModel
 
     @State private var answer13: Int? = nil
     @State private var answer14: Int? = nil
@@ -13,7 +16,6 @@ struct SurveyStep4View: View {
     @State private var showCamera = false
     @State private var showActionSheet = false
     @State private var showPhotosPicker = false
-    @Bindable var viewModel: HealthScoreViewModel = .init()
     
     private let options = ["매우 좋음", "좋음", "보통", "나쁨", "매우 나쁨"]
 
@@ -32,20 +34,17 @@ struct SurveyStep4View: View {
                         Text("질병 관련 불편감 및 불안")
                             .font(.system(size: 16, weight: .semibold))
                         
-                        questionView(
+                        surveyQuestionView(
                             number: 13,
-                            text: "몸의 불편함(통증, 피로, 소화불량 등)을 자주 느끼지 않는 편인가요?",
-                            selection: $answer13
+                            text: "몸의 불편함(통증, 피로, 소화불량 등)을 자주 느끼지 않는 편인가요?"
                         )
-                        questionView(
+                        surveyQuestionView(
                             number: 14,
-                            text: "질병에 대한 불안은 자주 느끼지 않는 편이신가요?",
-                            selection: $answer14
+                            text: "질병에 대한 불안은 자주 느끼지 않는 편이신가요?"
                         )
-                        questionView(
+                        surveyQuestionView(
                             number: 15,
-                            text: "최근 병원 진료를 자주 받는 경험이 없나요?",
-                            selection: $answer15
+                            text: "최근 병원 진료를 자주 받는 경험이 없나요?"
                         )
                     }
 
@@ -85,6 +84,12 @@ struct SurveyStep4View: View {
         .safeAreaInset(edge: .bottom) {
             PrimaryButton(title: "다음") {
                 router.push(.report)
+                
+                contentsVM.sendHealthSurvey(
+                        surveyViewModel: surveyVM,
+                        hemoglobin: nil,
+                        imageVM: imageVM
+                )
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -99,7 +104,7 @@ struct SurveyStep4View: View {
         }
         .sheet(isPresented: $showCamera) {
             CameraPicker { image in
-                viewModel.addImage(image)
+                imageVM.addImage(image)
             }
         }
         .photosPicker(
@@ -113,7 +118,7 @@ struct SurveyStep4View: View {
                 Task {
                     if let data = try? await item.loadTransferable(type: Data.self),
                        let image = UIImage(data: data) {
-                        viewModel.addImage(image)
+                        imageVM.addImage(image)
                     }
                 }
             }
@@ -122,10 +127,9 @@ struct SurveyStep4View: View {
 
     // 라디오 버튼 질문 뷰 추출
     @ViewBuilder
-    private func questionView(
+    private func surveyQuestionView(
         number: Int,
-        text: String,
-        selection: Binding<Int?>
+        text: String
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("\(number). \(text)")
@@ -134,9 +138,9 @@ struct SurveyStep4View: View {
                 ForEach(Array(options.enumerated()), id: \.offset) { idx, label in
                     RadioButton(
                         label: label,
-                        isSelected: selection.wrappedValue == idx
+                        isSelected: surveyVM.answers[number - 1].selectionIndex == idx
                     ) {
-                        selection.wrappedValue = idx
+                        surveyVM.answers[number - 1].selectionIndex = idx
                     }
                 }
             }
@@ -144,11 +148,63 @@ struct SurveyStep4View: View {
     }
 }
 
+extension SurveyStep4View {
+    // OCR 결과 리스트
+    @ViewBuilder
+    private var ocrResultListView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(imageVM.ocrResults) { model in
+                ocrResultCard(for: model)
+            }
+        }
+    }
+
+    // OCR 결과 카드
+    @ViewBuilder
+    private func ocrResultCard(for model: MemoModel) -> some View {
+        ZStack(alignment: .topLeading) {
+            VStack(alignment: .leading, spacing: 8) {
+                ScrollView {
+                    Text(model.capturedText)
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color(.secondarySystemBackground))
+                        )
+                }
+                .frame(minHeight: 50, maxHeight: 250)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .gray.opacity(0.2), radius: 2)
+            )
+            .padding(.top, 12)
+
+            // 책 속 문장 뱃지
+            HStack(spacing: 4) {
+                Image(systemName: "bookmark")
+                    .font(.system(size: 12, weight: .medium))
+                Text("책 속 문장")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .offset(x: 10)
+        }
+    }
+}
 
 // MARK: - Preview
 struct SurveyStep4View_Previews: PreviewProvider {
     static var previews: some View {
         SurveyStep4View()
+            .environmentObject(ContentsViewModel())
+            .environmentObject(HealthScoreViewModel())
+            .environmentObject(SurveyViewModel())
             .environment(NavigationRouter())
     }
 }

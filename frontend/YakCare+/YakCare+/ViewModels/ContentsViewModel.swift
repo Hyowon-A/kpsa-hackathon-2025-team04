@@ -17,6 +17,50 @@ final class ContentsViewModel: ObservableObject {
         }
     
     
+    func sendHealthSurvey(
+        surveyViewModel: SurveyViewModel,
+        hemoglobin: Double?,
+        imageVM: HealthScoreViewModel
+    ) {
+        guard let requestBody = imageVM.makeRequestBody(
+            from: surveyViewModel,
+            hemoglobin: hemoglobin
+        ) else {
+            print("❌ 건강 데이터 없음")
+            return
+        }
+
+        // 🔹 requestBody 로그 출력
+        do {
+            let jsonData = try JSONEncoder().encode(requestBody)
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                print("📤 전송할 requestBody:\n\(jsonString)")
+            }
+        } catch {
+            print("❌ requestBody 인코딩 실패:", error)
+        }
+
+        loginProvider.request(.submitSurvey(request: requestBody)) { result in
+            switch result {
+            case .success(let response):
+                do {
+                    let res = try JSONDecoder().decode(SurveyResponse.self, from: response.data)
+                    print("✅ 설문 저장 완료: \(res.message)")
+                    print("👤 사용자: \(res.username)")
+                    print("🟦 총점: \(res.total_score.score)")
+                    print("💊 추천 영양제: \(res.supplement_list.supplements.map(\.name))")
+                } catch {
+                    print("❌ 설문 응답 디코딩 실패:", error)
+                }
+
+                case .failure(let error):
+                    print("❌ 설문 제출 실패:", error)
+                }
+        }
+    }
+
+
+    
     func loginAndStoreTokens(email: String, password: String) {
             loginProvider.request(.login(email: email, password: password)) { result in
                 switch result {

@@ -18,7 +18,7 @@ def signup():
     gender = request.json.get("gender")
     occupation = request.json.get("occupation")
     work_style = request.json.get("work_style")
-    
+
     existing_account = db.session.query(Account).filter_by(email=email).first()
     if existing_account:
         return jsonify({"message": "User already exists"}), 409
