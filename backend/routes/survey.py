@@ -40,7 +40,6 @@ def result(current_user):
             "정신/감정 상태": mental,
             "질병 관련 불편함 및 불안": inconvenience_concern
         }
-        
         # 객관적 설문
         # 건강검진결과 업로드 했을 경우
         if data.get("upload"):
@@ -97,6 +96,7 @@ def result(current_user):
 
         return jsonify({
             "username": user.name,
+            "dob": user.dob,
             "message": "Survey saved successfully",
             "total_score": objective_result,
             "gpt_recommendations": gpt_ingredients,
