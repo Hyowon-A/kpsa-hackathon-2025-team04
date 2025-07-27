@@ -2,7 +2,9 @@ from flask import Flask
 from db.models import db
 from routes import register_routes
 from dotenv import load_dotenv
+
 import os
+
 
 def create_app():
     app = Flask(__name__)
@@ -19,11 +21,11 @@ def create_app():
     return app
 
 app = create_app()
-
+    
 @app.route("/")
 def index():
     return "Backend server is running!"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5050, debug=True)
-
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

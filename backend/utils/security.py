@@ -30,6 +30,7 @@ def token_required(f):
 
         return f({"email": current_user, "user_id": user_id}, *args, **kwargs)
 
+
     return decorated
 
 def generate_jwt(payload, hours=6):
