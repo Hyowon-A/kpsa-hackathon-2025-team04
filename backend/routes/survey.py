@@ -1,11 +1,12 @@
 from flask import Blueprint, request, jsonify, make_response
 from utils.security import generate_jwt, token_required
-from sqlalchemy import select
-from db.models import db, SurveyResponse, User
+from sqlalchemy import func, or_
+from db.models import MedicineIngredient, db, SurveyResponse, User, Medicine, Ingredient
 from datetime import datetime, timedelta
 from openai import OpenAI
-import os
+import os, random
 from dotenv import load_dotenv
+import re
 
 survey_bp = Blueprint("survey", __name__, url_prefix="/survey")
 
@@ -55,9 +56,9 @@ def result(current_user):
         db.session.add(survey_response)
         db.session.commit()
         
+        
         user = User.query.get(user_id)
 
-        
         # GPT 프롬프트
         prompt = f"""
         성별: {user.gender}, 나이: {user.dob.year if user.dob else '미상'}, 직업군: {user.occupation}, 근무형태: {user.work_style}
@@ -65,10 +66,12 @@ def result(current_user):
         복용중인 영양제: {objective_result['supplements']}
         건강검진 주요 상태: {objective_result['conditions']}
 
-        이 정보를 바탕으로 현재 건강상태를 보완할 수 있는 주요 영양제 성분 2가지를 추천하고,
-        각 성분의 효능을 간단히 설명해 주세요.
+        이 정보를 바탕으로 현재 건강상태를 보완할 수 있는 주요 영양제 성분 2가지 추천해줘
+        다른말은 하지 말고 이름만 적어줘
+        아래 리스트 중에서만 추천해줘 
+        DHA/EPA 제품, 밀크씨슬, 프로바이오틱스, 은행잎 추출물, 홍삼, 비타민 C, 코엔자임 Q10, 멀티비타민, 포스파티딜세린, L-테아닌, 알로에, 홍경천, 녹차추출물, 칼슘 + 비타민D, 글루코사민, 뮤코다당단백, 콘드로이친, 프락토 올리고당, 쏘팔메토 열매추출물, 비타민A, 루테인, 아스타잔틴, 바나바잎
         """
-
+        
         gpt_response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -77,17 +80,75 @@ def result(current_user):
             ],
             max_tokens=300
         )
-        recommendations = gpt_response.choices[0].message.content
+        recommendations = gpt_response.choices[0].message.content.strip()
+        print("GPT 응답:", recommendations)
+
+        # 쉼표, 줄바꿈 모두 기준으로 나눔
+        gpt_ingredients = [item.strip() for item in re.split(r'[,\n]', recommendations) if item.strip()]
+        print("추천 성분 리스트:", gpt_ingredients)
+
+        # 디버깅용 검색 개수
+        for ing in gpt_ingredients:
+            count = db.session.query(Medicine).filter(Medicine.efficacy.ilike(f"%{ing}%")).count()
+            print(f"검색 테스트: {ing} -> {count}개")
+
+        supplement_list = get_random_supplements(gpt_ingredients, count=3)
+
 
         return jsonify({
+            "username": user.name,
             "message": "Survey saved successfully",
             "total_score": objective_result,
-            "recommendations": recommendations
+            "gpt_recommendations": gpt_ingredients,
+            "supplement_list": supplement_list  # DB에서 랜덤 추천된 제품 3개
         })
 
     except Exception as e:
         return jsonify({"message": "Error calculating score", "error": str(e)}), 500
     
+
+def get_random_supplements(ingredient_names, count=3):
+    # DB에서 GPT가 추천한 성분 중 실제 존재하는 성분만 검색
+    matched_ingredients = (
+        db.session.query(Ingredient)
+        .filter(Ingredient.name.in_(ingredient_names))
+        .all()
+    )
+
+    # 성분 ID 리스트
+    ingredient_ids = [ing.id for ing in matched_ingredients]
+
+    if not ingredient_ids:
+        return {
+            "recommended_ingredients": [],
+            "supplements": []
+        }
+
+    # 추천 성분 중 하나라도 포함된 제품 검색
+    query = (
+        db.session.query(Medicine)
+        .join(MedicineIngredient, Medicine.id == MedicineIngredient.medicine_id)
+        .filter(MedicineIngredient.ingredient_id.in_(ingredient_ids))
+        .order_by(func.random())
+        .limit(count)
+    )
+
+    supplements = [
+        {
+            "name": m.name,
+            "manufacturer": m.manufacturer,
+            "price": m.price,
+            "efficacy": m.efficacy,
+            "image_url": m.image_url
+        }
+        for m in query.all()
+    ]
+
+    return {
+        "recommended_ingredients": [ing.name for ing in matched_ingredients],
+        "supplements": supplements
+    }
+
     
 def calculate_objective_score_with_upload(data):
     score = 100

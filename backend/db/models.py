@@ -100,3 +100,42 @@ class SurveyResponse(db.Model):
 
     def __repr__(self):
         return f"<SurveyResponse {self.id} - User {self.user_id}>"
+
+class Medicine(db.Model):
+    __tablename__ = 'medicines'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    manufacturer = db.Column(db.String(255), nullable=True)
+    price = db.Column(db.String(255), nullable=True)
+    efficacy = db.Column(db.Text, nullable=True)
+    image_url = db.Column(db.String(255), nullable=True)  # 이미지 URL 컬럼 추가
+
+
+    # Many-to-many relationship
+    ingredients = db.relationship(
+        'Ingredient',
+        secondary='medicines_ingredients',
+        back_populates='medicines'
+    )
+
+
+class Ingredient(db.Model):
+    __tablename__ = 'ingredients'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True)
+
+    medicines = db.relationship(
+        'Medicine',
+        secondary='medicines_ingredients',
+        back_populates='ingredients'
+    )
+
+
+class MedicineIngredient(db.Model):
+    __tablename__ = 'medicines_ingredients'
+
+    id = db.Column(db.Integer, primary_key=True)
+    medicine_id = db.Column(db.Integer, db.ForeignKey('medicines.id'), nullable=False)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('ingredients.id'), nullable=False)
