@@ -33,6 +33,7 @@ struct RadioButton: View {
 struct SurveyStep2View: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(NavigationRouter.self) private var router
+    @EnvironmentObject var surveyVM: SurveyViewModel
     // 1~6번 답변을 인덱스로 관리
     @State private var answer1: Int? = nil
     @State private var answer2: Int? = nil
@@ -64,8 +65,10 @@ struct SurveyStep2View: View {
                             ForEach(Array(options.enumerated()), id: \.offset) { idx, label in
                                 RadioButton(
                                     label: label,
-                                    isSelected: answer1 == idx
-                                ) { answer1 = idx }
+                                    isSelected: surveyVM.answers[0].selectionIndex == idx
+                                ) {
+                                    surveyVM.answers[0].selectionIndex = idx
+                                }
                             }
                         }
                     }
@@ -78,8 +81,11 @@ struct SurveyStep2View: View {
                             ForEach(Array(options.enumerated()), id: \.offset) { idx, label in
                                 RadioButton(
                                     label: label,
-                                    isSelected: answer2 == idx
-                                ) { answer2 = idx }
+                                    isSelected: surveyVM.answers[1].selectionIndex == idx
+                                ) {
+                                    surveyVM.answers[1].selectionIndex = idx
+                                }
+
                             }
                         }
                     }
@@ -92,8 +98,11 @@ struct SurveyStep2View: View {
                             ForEach(Array(options.enumerated()), id: \.offset) { idx, label in
                                 RadioButton(
                                     label: label,
-                                    isSelected: answer3 == idx
-                                ) { answer3 = idx }
+                                    isSelected: surveyVM.answers[2].selectionIndex == idx
+                                ) {
+                                    surveyVM.answers[2].selectionIndex = idx
+                                }
+
                             }
                         }
                     }
@@ -110,8 +119,11 @@ struct SurveyStep2View: View {
                             ForEach(Array(options.enumerated()), id: \.offset) { idx, label in
                                 RadioButton(
                                     label: label,
-                                    isSelected: answer4 == idx
-                                ) { answer4 = idx }
+                                    isSelected: surveyVM.answers[3].selectionIndex == idx
+                                ) {
+                                    surveyVM.answers[3].selectionIndex = idx
+                                }
+
                             }
                         }
                     }
@@ -124,8 +136,11 @@ struct SurveyStep2View: View {
                             ForEach(Array(options.enumerated()), id: \.offset) { idx, label in
                                 RadioButton(
                                     label: label,
-                                    isSelected: answer5 == idx
-                                ) { answer5 = idx }
+                                    isSelected: surveyVM.answers[4].selectionIndex == idx
+                                ) {
+                                    surveyVM.answers[4].selectionIndex = idx
+                                }
+
                             }
                         }
                     }
@@ -138,8 +153,11 @@ struct SurveyStep2View: View {
                             ForEach(Array(options.enumerated()), id: \.offset) { idx, label in
                                 RadioButton(
                                     label: label,
-                                    isSelected: answer6 == idx
-                                ) { answer6 = idx }
+                                    isSelected: surveyVM.answers[5].selectionIndex == idx
+                                ) {
+                                    surveyVM.answers[5].selectionIndex = idx
+                                }
+
                             }
                         }
                     }

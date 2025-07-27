@@ -3,60 +3,86 @@ import SwiftUI
 struct HealthReportView: View {
     @Environment(NavigationRouter.self) private var router
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var surveyVM: SurveyViewModel
+    @EnvironmentObject var contentsVM: ContentsViewModel
+
     @State private var selectedTab = 0
-    
+    @State private var username: String = "사용자"
+    @State private var totalScore: Int = 0
+
     private let tabs = ["객관적 건강 수치 평가", "주관적 건강 평가"]
-    private let score = 714
     private let warningItems = ["ALT(간기능)", "eGFR(신장기능)"]
-    
+
     var body: some View {
         VStack(spacing: 0) {
-            // NavBar
             NavBarView {
                 router.push(.home)
             }
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Header
-                    HeaderView()
-                    
-                    // Segmented Tabs
+                    HeaderView(username: username)
+
                     SegmentedTabsView(tabs: tabs, selectedIndex: $selectedTab)
-                    
+
                     Spacer().frame(height: 50)
-                    
-                    // Gauge
-                    GaugeView(score: score)
-                        .frame(width: 200, height: 100)
-                        .padding(.horizontal, 24)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    
-                    // Legend
+
+                    if selectedTab == 0 {
+                        GaugeView(score: totalScore)
+                            .frame(width: 200, height: 100)
+                            .padding(.horizontal, 24)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    } else {
+                        Text("주관적 건강 점수: \(surveyVM.totalScore)점")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .padding(.vertical, 20)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+
                     LegendView()
-                    
-                    // Analysis Title
+
                     Text("건강검진 결과 분석")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .padding(.horizontal, 24)
-                    
-                    // Analysis Table
+
                     AnalysisSectionView(titles: ["주의", "위험"], items: [warningItems, warningItems])
-                    
-                    // Summary
-                    SummarySectionView(items: ["복용 약물", "복용 영양제 또는 건기식", "과거력", "가족력"])
-                        .padding(.horizontal, 24)
-                    
-                    // Recommendations
-                    RecommendationsSectionView(count: 3)
+
+                    if let response = $contentsVM.surveyResponse {
+                        SummarySectionView(
+                            medications: response.total_score.medications,
+                            supplements: response.total_score.supplements,
+                            pastConditions: response.total_score.past_conditions,
+                            familyHistory: response.total_score.family_history
+                        )
+
+                        RecommendationsSectionView(
+                            supplements: response.supplement_list.supplements,
+                            username: response.username
+                        )
+                    }
+
+                    .padding(.horizontal, 24)
+
+
+                    RecommendationsSectionView(count: 3, username: username)
                 }
             }
         }
         .edgesIgnoringSafeArea(.bottom)
         .navigationBarBackButtonHidden()
+        .onAppear {
+            loadMockSurveyResponse()
+        }
+    }
+
+    private func loadMockSurveyResponse() {
+        self.username = "이효주"
+        self.totalScore = 84
     }
 }
+
 
 // MARK: - NavBarView
 struct NavBarView: View {
@@ -75,16 +101,17 @@ struct NavBarView: View {
 
 // MARK: - HeaderView
 struct HeaderView: View {
+    var username: String
     var body: some View {
         HStack(spacing: 16) {
             Circle()
                 .fill(Color.gray.opacity(0.4))
                 .frame(width: 60, height: 60)
             VStack(alignment: .leading, spacing: 4) {
-                Text("000님의 건강분석 레포트")
+                Text("\(username)님의 건강분석 레포트")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                Text("2006. 08. 14생 / 여 / 정밀검사")
+                Text("2003. 08. 05생 / 여 / 정밀검사")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
@@ -176,21 +203,46 @@ struct AnalysisSectionView: View {
 
 // MARK: - SummarySectionView
 struct SummarySectionView: View {
-    let items: [String]
+    let medications: [String]
+    let supplements: [String]
+    let pastConditions: [String]
+    let familyHistory: [String]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("검진 내용 요약")
                 .font(.subheadline)
                 .fontWeight(.semibold)
-            ForEach(items, id: \.self) { title in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Divider()
+
+            SummaryItemView(title: "복용 약물", items: medications)
+            SummaryItemView(title: "복용 영양제 또는 건기식", items: supplements)
+            SummaryItemView(title: "과거력", items: pastConditions)
+            SummaryItemView(title: "가족력", items: familyHistory)
+        }
+    }
+}
+
+struct SummaryItemView: View {
+    let title: String
+    let items: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+            if items.isEmpty {
+                Text("- 없음")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(items, id: \.self) { item in
+                    Text("- \(item)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
             }
+            Divider()
         }
     }
 }
@@ -198,16 +250,15 @@ struct SummarySectionView: View {
 // MARK: - RecommendationsSectionView
 struct RecommendationsSectionView: View {
     let count: Int
+    let username: String
 
     var body: some View {
         VStack(spacing: 0) {
-            // Title
-            Text("00님께 딱 맞는 건강기능식품 추천")
+            Text("\(username)님께 딱 맞는 건강기능식품 추천")
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .padding(.bottom, 8)
 
-            // Recommendations cards with gray background
             HStack(spacing: 12) {
                 ForEach(0..<count, id: \.self) { _ in
                     RecommendationCard()
@@ -248,8 +299,8 @@ struct GaugeView: View {
                 .foregroundColor(Color.blue)
                 .frame(width: diameter, height: diameter)
             VStack(spacing: 4) {
-                Text("\(score)점")
-                    .font(.system(size: 24, weight: .bold))
+                Text("파워 긍정형 개복치")
+                    .font(.system(size: 12, weight: .bold))
                 Text("\(score)점")
                     .font(.system(size: 24, weight: .bold))
             }

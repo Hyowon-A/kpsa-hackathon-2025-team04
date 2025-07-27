@@ -4,11 +4,23 @@ import Foundation
 import SwiftUI
 import Vision
 
+struct ParsedHealthData {
+    let bmi: Int?
+    let systolic: Int?
+    let diastolic: Int?
+    let fastingGlucose: Int?
+    let egfr: Int?
+    let ast: Int?
+    let alt: Int?
+}
+
 @Observable
-class HealthScoreViewModel: ImageHandling {
+class HealthScoreViewModel: ImageHandling, ObservableObject {
     var selectedImage: MemoModel?
     var images: [UIImage] = []
     var ocrResults:[MemoModel] = []
+    var latestParsedHealth: ParsedHealthData? = nil
+
     
     /// ImageHandling 프로토콜을 준수한다. addImage(), getImage()
     func addImage(_ image: UIImage) {
@@ -23,6 +35,35 @@ class HealthScoreViewModel: ImageHandling {
     
     func getImages() -> [UIImage] {
         images
+    }
+    
+    func makeRequestBody(
+        from surveyViewModel: SurveyViewModel,
+        hemoglobin: Double?
+    ) -> HealthSurveyRequest? {
+        guard let health = latestParsedHealth else { return nil }
+
+        return HealthSurveyRequest(
+            overall_health_aware: surveyViewModel.step1Score,
+            daily_function: surveyViewModel.step2Score,
+            life_pattern: surveyViewModel.step3Score,
+            mental: surveyViewModel.step4Score,
+            inconvenience_concern: surveyViewModel.step5Score,
+            subjective_score: surveyViewModel.totalScore,
+            medications: surveyViewModel.medications,
+            supplements: surveyViewModel.supplements,
+            past_conditions: surveyViewModel.pastConditions,
+            family_history: surveyViewModel.familyHistory,
+            systolic: health.systolic,
+            diastolic: health.diastolic,
+            fasting_glucose: health.fastingGlucose,
+            bmi: health.bmi,
+            ast: health.ast,
+            alt: health.alt,
+            egfr: health.egfr,
+            hemoglobin: hemoglobin,
+            upload: true
+        )
     }
     
     /// OCR 함수
@@ -65,11 +106,15 @@ class HealthScoreViewModel: ImageHandling {
             print("===== 왼→오 정렬된 OCR 결과 =====")
             print(fullText)
 
-            let parsed = self.parseWithoutRegex(from: fullText)
+            let (parsedMemo, parsedData) = self.parseWithoutRegex(from: fullText)
 
             DispatchQueue.main.async {
-                self.ocrResults.append(parsed)
+                self.ocrResults.append(parsedMemo)
+                self.latestParsedHealth = parsedData
             }
+            
+            print("✅ 저장된 parsedData:", parsedData)
+
         }
         
         request.recognitionLevel = .accurate
@@ -84,7 +129,7 @@ class HealthScoreViewModel: ImageHandling {
 
     
     /// OCR 결과 문자열을 파싱하여 MemoModel로 변환한다.
-    private func parseWithoutRegex(from text: String) -> MemoModel {
+    private func parseWithoutRegex(from text: String) -> (MemoModel, ParsedHealthData) {
         let lines = text.components(separatedBy: .newlines)
 
         var bmi: String?
@@ -158,12 +203,61 @@ class HealthScoreViewModel: ImageHandling {
         """
 
         print("===== 최종 파싱 결과 =====\n\(resultText)")
+        
+        let parsedData = convertParsedStringsToInts(
+            bmi: bmi,
+            bloodPressure: bloodPressure,
+            fastingGlucose: fastingGlucose,
+            egfr: egfr,
+            ast: ast,
+            alt: alt
+        )
 
-        return MemoModel(capturedText: resultText)
+        let memoModel = MemoModel(capturedText: resultText)
+        return (memoModel, parsedData)
+
     }
 
+    private func convertParsedStringsToInts(
+        bmi: String?,
+        bloodPressure: String?,
+        fastingGlucose: String?,
+        egfr: String?,
+        ast: String?,
+        alt: String?
+    ) -> ParsedHealthData {
+        // 혈압 처리 (예: "120 / 80")
+        var systolic: Int? = nil
+        var diastolic: Int? = nil
+        if let bp = bloodPressure {
+            let numbers = bp
+                .components(separatedBy: "/")
+                .map { $0.trimmingCharacters(in: .whitespaces).onlyDigits() }
 
+            if numbers.count == 2 {
+                systolic = Int(numbers[0])
+                diastolic = Int(numbers[1])
+            }
+        }
 
+        // 나머지 수치 정수 변환
+        let bmiDouble = Double(bmi?.onlyDigitsDots() ?? "")
+        let bmiInt = bmiDouble.map { Int($0) }
+        let fastingGlucoseInt = Int(fastingGlucose?.onlyDigits() ?? "")
+        let egfrInt = Int(egfr?.onlyDigits() ?? "")
+        let astInt = Int(ast?.onlyDigits() ?? "")
+        let altInt = Int(alt?.onlyDigits() ?? "")
+
+        return ParsedHealthData(
+            bmi: bmiInt,
+            systolic: systolic,
+            diastolic: diastolic,
+            fastingGlucose: fastingGlucoseInt,
+            egfr: egfrInt,
+            ast: astInt,
+            alt: altInt
+        )
+    }
 
 }
 
@@ -223,5 +317,11 @@ extension String {
         return regex.matches(in: self, range: range).compactMap {
             Range($0.range, in: self).map { String(self[$0]) }
         }
+    }
+}
+
+extension String {
+    func onlyDigits() -> String {
+        return self.filter { $0.isNumber }
     }
 }

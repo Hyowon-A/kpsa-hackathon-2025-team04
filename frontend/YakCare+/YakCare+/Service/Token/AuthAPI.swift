@@ -6,6 +6,7 @@ import SwiftUI
 enum AuthRouter {
     case login(email: String, password: String)
     case sendRefreshToken(refreshToken: String)
+    case submitSurvey(request: HealthSurveyRequest)
 }
 
 extension AuthRouter: APITargetType {
@@ -15,6 +16,8 @@ extension AuthRouter: APITargetType {
         switch self {
         case .login:               return "/auth/login"
         case .sendRefreshToken:    return "/auth/refresh"
+        case .submitSurvey:
+            return "/survey/result"
         }
     }
 
@@ -22,6 +25,8 @@ extension AuthRouter: APITargetType {
         switch self {
         case .login:               return .post
         case .sendRefreshToken:    return .get
+        case .submitSurvey:
+            return .post
         }
     }
 
@@ -38,6 +43,8 @@ extension AuthRouter: APITargetType {
                 parameters: ["refreshToken": token],
                 encoding: URLEncoding.queryString
             )
+        case let .submitSurvey(request):
+                    return .requestJSONEncodable(request)
         }
     }
 

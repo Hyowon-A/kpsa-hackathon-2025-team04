@@ -4,6 +4,7 @@ import SwiftUI
 struct SurveyStep3View: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(NavigationRouter.self) private var router
+    @EnvironmentObject var surveyVM: SurveyViewModel
 
     // 7~12번 답변을 인덱스로 관리
     @State private var answer7: Int? = nil
@@ -31,18 +32,15 @@ struct SurveyStep3View: View {
                     // 7번~9번
                     surveyQuestionView(
                         number: 7,
-                        text: "규칙적인 운동을 하고 있나요?",
-                        selection: $answer7
+                        text: "규칙적인 운동을 하고 있나요?"
                     )
                     surveyQuestionView(
                         number: 8,
-                        text: "평소 충분한 수면을 취하시나요?",
-                        selection: $answer8
+                        text: "평소 충분한 수면을 취하시나요?"
                     )
                     surveyQuestionView(
                         number: 9,
-                        text: "본인의 식습관은 건강하다고 생각하시나요?",
-                        selection: $answer9
+                        text: "본인의 식습관은 건강하다고 생각하시나요?"
                     )
 
                     // — 정신·감정 상태
@@ -52,18 +50,15 @@ struct SurveyStep3View: View {
                     // 10번~12번
                     surveyQuestionView(
                         number: 10,
-                        text: "평소 마음이 안정적이라고 느끼시나요?",
-                        selection: $answer10
+                        text: "평소 마음이 안정적이라고 느끼시나요?"
                     )
                     surveyQuestionView(
                         number: 11,
-                        text: "스트레스로 인한 신체적 증상을 거의 경험하지 않는 편인가요?",
-                        selection: $answer11
+                        text: "스트레스로 인한 신체적 증상을 거의 경험하지 않는 편인가요?"
                     )
                     surveyQuestionView(
                         number: 12,
-                        text: "스트레스로 인한 신체적 증상을 거의 경험하지 않는 편인가요?",
-                        selection: $answer12
+                        text: "스트레스로 인한 신체적 증상을 거의 경험하지 않는 편인가요?"
                     )
                 }
                 .padding(.horizontal, 16)
@@ -100,8 +95,7 @@ struct SurveyStep3View: View {
     @ViewBuilder
     private func surveyQuestionView(
         number: Int,
-        text: String,
-        selection: Binding<Int?>
+        text: String
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("\(number). \(text)")
@@ -110,9 +104,9 @@ struct SurveyStep3View: View {
                 ForEach(Array(options.enumerated()), id: \.offset) { idx, label in
                     RadioButton(
                         label: label,
-                        isSelected: selection.wrappedValue == idx
+                        isSelected: surveyVM.answers[number - 1].selectionIndex == idx
                     ) {
-                        selection.wrappedValue = idx
+                        surveyVM.answers[number - 1].selectionIndex = idx
                     }
                 }
             }
