@@ -1,69 +1,70 @@
-# 약학 x IT 해커톤 2025 - 팀 프로젝트 레포지토리
+# 🩺 KPSA Hackathon 2025 – Backend (Team 04)
 
-이 레포지토리는 팀별로 Fork하여 사용하는 공식 표준 레포지토리입니다.
-레포지토리 명은 `kpsa-hackathon-2025-team00` 형식으로 설정해주세요
+This backend powers **YakCare+**, a personalized health scoring and supplement recommendation service built for the **KPSA Hackathon 2025**. It enables users to receive health assessments based on both subjective and objective inputs, and integrates GPT to deliver personalized supplement ingredient recommendations.
 
+---
 
-## 📁 폴더 구조 (예시: 팀 자율 구성)
+## 🧠 Backend Features
 
-- `frontend/` : 프론트엔드 개발 코드  
-- `backend/` : 백엔드 개발 코드  
-- `design/` : 디자인 파일 (해커톤 시작 이후 작업)  
-- `docs/` : 발표 자료, 참고 문서 등  
+### ✅ Health Scoring System
+- Computes a **composite health score (0–100)** using:
+  - Blood pressure (systolic/diastolic)
+  - Fasting glucose
+  - BMI
+  - Liver function (AST, ALT)
+  - Kidney function (eGFR)
+  - Past conditions, medications, supplements, family history
+- Assigns risk levels to each metric: `Normal`, `Caution`, or `Danger`
+- Supports both uploaded health reports and survey-based data input
 
-> ※ 폴더 구조는 팀 상황에 맞게 자율적으로 구성하되, 주요 항목은 유지해 주세요.
+---
 
+### 🤖 GPT-Driven Ingredient Recommendation
+- Leverages **OpenAI GPT-4o** to suggest **2 personalized supplement ingredients** based on:
+  - Demographics (age, gender), lifestyle, and existing health data
+- Output is limited to a curated whitelist of 20+ functional ingredients
+- Results are parsed and matched to real-world supplements in the database
 
+---
 
-## 📝 최종 제출물
+### 🔍 Smart Supplement Matching (Relational DB Query)
+- **Schema Design:**
+  - `medicines`: Supplement product catalog
+  - `ingredients`: Active ingredient list
+  - `medicines_ingredients`: Many-to-many mapping table
+- Returns **up to 3 random supplements** that include **at least one** of the recommended ingredients
+- Product images are hosted on **AWS S3** and returned with metadata for frontend rendering
 
-해커톤 종료 후, 아래 항목들을 **운영진에 제출**해야 합니다.
+---
 
-- 퍼블릭 GitHub 레포지토리 링크  
-- 커밋 로그 파일 (`.txt`) → 추후 안내 예정  
-- 데모 영상 (`.mp4`)  
-- 발표 자료 (`.pdf`)
+### 💊 Booking System
+- Users can schedule 1:1 consultations with registered pharmacists
+- `booking` table captures:
+  - User ID, Pharmacy ID, Appointment time, User notes, Timestamps
+- Each pharmacist is tied to a registered `pharmacy` account
 
-> 발표 시간은 **총 15분**이며, **10분 발표 + 5분 Q&A**로 구성됩니다.  
-> 데모 영상은 발표 시간 내 시연용으로 포함되어야 합니다.
+---
 
+### 🔐 Authentication
+- **JWT-based** token authentication system
+- Secures protected endpoints (e.g., health surveys, bookings)
+- Supports user registration and login flows
 
+---
 
-## ⚠️ 유의사항
+## 🗃️ Database Schema
 
-- 모든 개발 작업은 **본 레포를 Fork한 팀별 레포지토리**에서 시작해야 합니다.  
-- 팀 레포지토리는 **공개(Public)** 상태로 유지해 주세요. 커밋 이력은 치팅 방지 및 검증을 위해 확인됩니다.  
-- 최종 제출물은 ```kpsa.nextwave@gmail.com``` 으로 제출해주세요.
+![YakCare DB schema](https://github.com/user-attachments/assets/01208074-105c-47e9-883a-9aa771c8dce3)
 
+---
 
+## ⚙️ Tech Stack
 
-## 📄 커밋 로그 파일 제출 방법
-
-팀별로 작업한 레포지토리의 커밋 이력을 `.txt` 파일로 추출하여 함께 제출해 주세요.
-
-### 🔧 커밋 로그 추출 방법 (예시)
-
-로컬 또는 GitHub Codespace/CLI 환경에서 아래 명령어를 입력합니다:
-
-```bash
-git log --pretty=format:"%h - %an, %ad : %s" --date=short > commit-log.txt
-```
-
-- `commit-log.txt` 파일이 생성되며, 이를 그대로 제출하시면 됩니다.
-- 각 커밋의 해시, 작성자, 날짜, 메시지가 포함됩니다.
-- 파일명은 다음 예시에 따라 제출해주세요.
-예시: `team17_commit-log.txt`
-
-## 첫 커밋 안내
-- 첫 커밋은 `README.md` 수정을 통해 아래 양식을 작성한 후 진행해 주세요.
-- 팀명과 아이디어명은 발표 전 변경 가능합니다.
-
-## 팀명: YakCare+
-
-## 아이디어 명: YakCare+
-
-
-
-
-감사합니다.  
-**– 약대협 KPSA 창업기획단 –**
+| Layer               | Tech                                               |
+|---------------------|----------------------------------------------------|
+| **Backend Framework** | Python + Flask                                     |
+| **ORM**             | SQLAlchemy (PostgreSQL)                            |
+| **Database**        | PostgreSQL via **AWS RDS**                         |
+| **Authentication**  | JWT                                                |
+| **AI Integration**  | OpenAI GPT-4o (Mini)                               |
+| **Image Hosting**   | AWS S3 (product image delivery)                    |
